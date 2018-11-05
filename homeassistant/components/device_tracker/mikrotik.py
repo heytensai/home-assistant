@@ -134,6 +134,7 @@ class MikrotikScanner(DeviceScanner):
 
     def _update_info(self):
         """Retrieve latest information from the Mikrotik box."""
+        import librouteros
         if self.method:
             devices_tracker = self.method
         else:
@@ -148,7 +149,15 @@ class MikrotikScanner(DeviceScanner):
             "Loading %s devices from Mikrotik (%s) ...",
             devices_tracker, self.host)
 
-        device_names = self.client(cmd='/ip/dhcp-server/lease/getall')
+        try:
+            device_names = self.client(cmd='/ip/dhcp-server/lease/getall')
+        except (librouteros.exceptions.TrapError,
+                librouteros.exceptions.MultiTrapError,
+                librouteros.exceptions.ConnectionError):
+            _LOGGER.info("Mikrotik (%s) device timeout", self.host)
+            self.last_results = {}
+            return False
+
         if devices_tracker == 'capsman':
             devices = self.client(
                 cmd='/caps-man/registration-table/getall')
